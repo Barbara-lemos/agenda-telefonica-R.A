@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Telefônica</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #003d82 0%, #004b9e 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #003d82 0%, #004b9e 100%);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: white;
+        }
+
+        .status-conexao {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .content {
+            padding: 25px 20px;
+        }
+
+        .formulario {
+            background: #f5f7fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #e0e7ff;
+        }
+
+        .formulario h2 {
+            font-size: 16px;
+            color: #003d82;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #004b9e;
+            box-shadow: 0 0 0 3px rgba(0, 75, 158, 0.1);
+        }
+
+        .botoes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 11px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-adicionar {
+            background: linear-gradient(135deg, #003d82 0%, #004b9e 100%);
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-adicionar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 75, 158, 0.3);
+        }
+
+        .btn-adicionar:active {
+            transform: translateY(0);
+        }
+
+        .btn-cancelar {
+            background: #e9ecef;
+            color: #333;
+            grid-column: 1 / -1;
+            margin-top: -8px;
+        }
+
+        .btn-cancelar:hover {
+            background: #dee2e6;
+        }
+
+        .busca-box {
+            margin-bottom: 20px;
+        }
+
+        .busca-box input {
+            width: 100%;
+            padding: 11px;
+            border: 2px solid #e0e7ff;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .busca-box input::placeholder {
+            color: #999;
+        }
+
+        .busca-box input:focus {
+            outline: none;
+            border-color: #004b9e;
+            box-shadow: 0 0 0 3px rgba(0, 75, 158, 0.1);
+        }
+
+        .titulo-lista {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .contador {
+            background: #004b9e;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .vazio {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+        }
+
+        .vazio-icone {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .lista-contatos {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .contato-item {
+            background: white;
+            border: 1px solid #e0e7ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .contato-item:hover {
+            border-color: #004b9e;
+            box-shadow: 0 2px 8px rgba(0, 75, 158, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .contato-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .contato-nome {
+            font-weight: 600;
+            font-size: 15px;
+            color: #003d82;
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+
+        .contato-telefone {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .contato-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .contato-acoes {
+            display: flex;
+            gap: 8px;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        .btn-editar,
+        .btn-deletar {
+            padding: 8px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-editar {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-editar:hover {
+            background: #ffb300;
+            transform: scale(1.05);
+        }
+
+        .btn-deletar {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-deletar:hover {
+            background: #da190b;
+            transform: scale(1.05);
+        }
+
+        .mensagem {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .mensagem.sucesso {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+            display: block;
+        }
+
+        .mensagem.erro {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+            display: block;
+        }
+
+        .sincronizando {
+            text-align: center;
+            color: #f9a825;
+            font-size: 12px;
+            padding: 10px;
+            display: none;
+        }
+
+        .sincronizando.ativo {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f9a825;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .header p {
+                font-size: 12px;
+            }
+
+            .content {
+                padding: 20px 15px;
+            }
+
+            .contato-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .contato-acoes {
+                margin-left: 0;
+                margin-top: 12px;
+                width: 100%;
+            }
+
+            .btn-editar,
+            .btn-deletar {
+                flex: 1;
+                padding: 10px;
+            }
+
+            .botoes {
+                grid-template-columns: 1fr;
+            }
+
+            .lista-contatos {
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📞 Agenda Telefônica</h1>
+            <p>Gerenciamento de contatos em tempo real</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-conexao">
+                <div class="status-dot"></div>
+                <span id="status-texto">Conectado</span>
+            </div>
+            <div id="ultima-atualizacao" style="font-size: 11px;">-</div>
+        </div>
+
+        <div class="content">
+            <div id="mensagem-app" class="mensagem"></div>
+
+            <div class="sincronizando" id="sincronizando">
+                <span class="spinner"></span>Sincronizando...
+            </div>
+
+            <!-- Formulário -->
+            <div class="formulario">
+                <h2 id="titulo-form">➕ Novo Contato</h2>
+
+                <div class="form-group">
+                    <label>Nome</label>
+                    <input 
+                        type="text" 
+                        id="nome" 
+                        placeholder="Digite o nome completo"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <input 
+                        type="tel" 
+                        id="telefone" 
+                        placeholder="(11) 99999-9999"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="botoes">
+                    <button class="btn-adicionar" onclick="adicionarOuAtualizar()">
+                        <span id="texto-btn">Adicionar</span>
+                    </button>
+                    <button class="btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" style="display: none;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Busca -->
+            <div class="busca-box">
+                <input 
+                    type="text" 
+                    id="busca" 
+                    placeholder="🔍 Buscar contato..."
+                    oninput="filtrarContatos()"
+                >
+            </div>
+
+            <!-- Lista -->
+            <div class="titulo-lista">
+                <span>Contatos</span>
+                <span class="contador" id="contador">0</span>
+            </div>
+
+            <div class="lista-contatos" id="lista-contatos"></div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO - MUDE AQUI!
+        const GITHUB_USER = 'Barbara-lemos';
+        const GITHUB_REPO = 'agenda-telefonica-R.A';
+        const GITHUB_TOKEN = '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';
+        const ARQUIVO_CONTATOS = 'contatos.json';
+        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ARQUIVO_CONTATOS}`;
+
+        let contatos = [];
+        let editandoId = null;
+        let ultimaSincronizacao = null;
+        let syncInterval = null;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarContatos();
+            // Sincronizar a cada 5 segundos
+            syncInterval = setInterval(carregarContatos, 5000);
+            
+            // Suporte a Enter
+            document.getElementById('telefone').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') adicionarOuAtualizar();
+            });
+            document.getElementById('nome').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') document.getElementById('telefone').focus();
+            });
+        });
+
+        async function carregarContatos() {
+            try {
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3.raw'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // Arquivo não existe, criar
+                        await criarArquivo([]);
+                        contatos = [];
+                    } else {
+                        throw new Error(`Erro ${response.status}`);
+                    }
+                } else {
+                    contatos = await response.json();
+                }
+
+                renderizarContatos();
+                atualizarUltimaSincronizacao();
+            } catch (erro) {
+                console.error('Erro ao carregar:', erro);
+                mostrarMensagem('❌ Erro ao sincronizar', 'erro');
+            }
+        }
+
+        async function salvarContatos() {
+            mostrarSincronizando(true);
+
+            try {
+                // Primeiro, pegar o SHA do arquivo atual
+                const responseGet = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                let sha = null;
+                if (responseGet.ok) {
+                    const data = await responseGet.json();
+                    sha = data.sha;
+                }
+
+                // Preparar dados
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(contatos, null, 2))));
+
+                // Atualizar arquivo
+                const responsePut = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Atualização de contatos - ${new Date().toLocaleString('pt-BR')}`,
+                        content: content,
+                        sha: sha
+                    })
+                });
+
+                if (!responsePut.ok) {
+                    throw new Error(`Erro ao salvar: ${responsePut.status}`);
+                }
+
+                mostrarSincronizando(false);
+                mostrarMensagem('✅ Contato salvo com sucesso!', 'sucesso');
+                setTimeout(() => carregarContatos(), 500);
+
+            } catch (erro) {
+                console.error('Erro ao salvar:', erro);
+                mostrarMensagem('❌ Erro ao salvar contato', 'erro');
+                mostrarSincronizando(false);
+            }
+        }
+
+        async function criarArquivo(dados) {
+            try {
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(dados, null, 2))));
+
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Criação de arquivo de contatos',
+                        content: content
+                    })
+                });
+            } catch (erro) {
+                console.error('Erro ao criar arquivo:', erro);
+            }
+        }
+
+        function adicionarOuAtualizar() {
+            const nome = document.getElementById('nome').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
+
+            if (!nome || !telefone) {
+                mostrarMensagem('⚠️ Preencha nome e telefone', 'erro');
+                return;
+            }
+
+            if (editandoId) {
+                const contato = contatos.find(c => c.id === editandoId);
+                if (contato) {
+                    contato.nome = nome;
+                    contato.telefone = telefone;
+                    contato.dataAtualizacao = new Date().toLocaleString('pt-BR');
+                }
+                editandoId = null;
+                cancelarEdicao();
+            } else {
+                const novoContato = {
+                    id: Date.now(),
+                    nome,
+                    telefone,
+                    dataCriacao: new Date().toLocaleString('pt-BR'),
+                    dataAtualizacao: new Date().toLocaleString('pt-BR')
+                };
+                contatos.push(novoContato);
+            }
+
+            document.getElementById('nome').value = '';
+            document.getElementById('telefone').value = '';
+            salvarContatos();
+        }
+
+        function editar(id) {
+            const contato = contatos.find(c => c.id === id);
+            if (!contato) return;
+
+            document.getElementById('nome').value = contato.nome;
+            document.getElementById('telefone').value = contato.telefone;
+            editandoId = id;
+
+            document.getElementById('titulo-form').innerText = '✏️ Editar Contato';
+            document.getElementById('texto-btn').innerText = 'Atualizar';
+            document.getElementById('btn-cancelar').style.display = 'block';
+            document.getElementById('nome').focus();
+        }
+
+        function cancelarEdicao() {
+            editandoId = null;
+            document.getElementById('nome').value = '';
+            document.getElementById('telefone').value = '';
+            document.getElementById('titulo-form').innerText = '➕ Novo Contato';
+            document.getElementById('texto-btn').innerText = 'Adicionar';
+            document.getElementById('btn-cancelar').style.display = 'none';
+        }
+
+        function deletar(id) {
+            if (!confirm('Tem certeza que deseja deletar?')) return;
+
+            contatos = contatos.filter(c => c.id !== id);
+            salvarContatos();
+        }
+
+        function filtrarContatos() {
+            renderizarContatos();
+        }
+
+        function renderizarContatos() {
+            const busca = document.getElementById('busca').value.toLowerCase();
+            const contatosFiltrados = contatos.filter(c =>
+                c.nome.toLowerCase().includes(busca) ||
+                c.telefone.includes(busca)
+            );
+
+            const lista = document.getElementById('lista-contatos');
+            document.getElementById('contador').innerText = contatosFiltrados.length;
+
+            if (contatosFiltrados.length === 0) {
+                lista.innerHTML = `
+                    <div class="vazio">
+                        <div class="vazio-icone">${contatos.length === 0 ? '📭' : '🔍'}</div>
+                        <p>${contatos.length === 0 ? 'Nenhum contato ainda' : 'Nenhum resultado encontrado'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            lista.innerHTML = contatosFiltrados.map(contato => `
+                <div class="contato-item">
+                    <div class="contato-info">
+                        <div class="contato-nome">${escapeHtml(contato.nome)}</div>
+                        <div class="contato-telefone">📱 ${escapeHtml(contato.telefone)}</div>
+                        <div class="contato-meta">Atualizado: ${contato.dataAtualizacao}</div>
+                    </div>
+                    <div class="contato-acoes">
+                        <button class="btn-editar" onclick="editar(${contato.id})">✏️</button>
+                        <button class="btn-deletar" onclick="deletar(${contato.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function mostrarMensagem(msg, tipo) {
+            const div = document.getElementById('mensagem-app');
+            div.textContent = msg;
+            div.className = 'mensagem ' + tipo;
+            setTimeout(() => {
+                div.className = 'mensagem';
+            }, 4000);
+        }
+
+        function mostrarSincronizando(visivel) {
+            document.getElementById('sincronizando').classList.toggle('ativo', visivel);
+        }
+
+        function atualizarUltimaSincronizacao() {
+            const agora = new Date();
+            document.getElementById('ultima-atualizacao').innerText = 
+                `Última sincronização: ${agora.toLocaleTimeString('pt-BR')}`;
+        }
+    </script>
+</body>
+</html>
