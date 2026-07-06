@@ -432,7 +432,10 @@
         const GITHUB_REPO = 'agenda-telefonica-R.A';
         const GITHUB_TOKEN = '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';
         const ARQUIVO_CONTATOS = 'contatos.json';
-        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ARQUIVO_CONTATOS}`;
+        
+        // URLs
+        const URL_LEITURA = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${ARQUIVO_CONTATOS}`;
+        const URL_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ARQUIVO_CONTATOS}`;
 
         let contatos = [];
         let editandoId = null;
@@ -452,20 +455,15 @@
 
         async function carregarContatos() {
             try {
-                const response = await fetch(API_URL, {
-                    headers: {
-                        'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3.raw',
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
-                });
+                // Ler arquivo público (sem autenticação)
+                const response = await fetch(URL_LEITURA);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
 
                 const text = await response.text();
-                contatos = text ? JSON.parse(text) : [];
+                contatos = text && text !== '[]' ? JSON.parse(text) : [];
                 renderizarContatos();
                 atualizarUltimaSincronizacao();
             } catch (erro) {
@@ -477,11 +475,11 @@
             mostrarSincronizando(true);
 
             try {
-                const responseGet = await fetch(API_URL, {
+                // Pegar SHA do arquivo (com autenticação)
+                const responseGet = await fetch(URL_API, {
                     headers: {
                         'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'X-GitHub-Api-Version': '2022-11-28'
+                        'Accept': 'application/vnd.github.v3+json'
                     }
                 });
 
@@ -493,12 +491,12 @@
 
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(contatos, null, 2))));
 
-                const responsePut = await fetch(API_URL, {
+                // Salvar arquivo (com autenticação)
+                const responsePut = await fetch(URL_API, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${GITHUB_TOKEN}`,
                         'Accept': 'application/vnd.github.v3+json',
-                        'X-GitHub-Api-Version': '2022-11-28',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -514,7 +512,7 @@
 
                 mostrarSincronizando(false);
                 mostrarMensagem('✅ Contato salvo com sucesso!', 'sucesso');
-                setTimeout(() => carregarContatos(), 500);
+                setTimeout(() => carregarContatos(), 1000);
 
             } catch (erro) {
                 console.error('Erro ao salvar:', erro);
