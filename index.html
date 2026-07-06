@@ -311,18 +311,6 @@
             display: block;
         }
 
-        .sincronizando {
-            text-align: center;
-            color: #f9a825;
-            font-size: 12px;
-            padding: 10px;
-            display: none;
-        }
-
-        .sincronizando.ativo {
-            display: block;
-        }
-
         @media (max-width: 600px) {
             .header h1 {
                 font-size: 22px;
@@ -355,7 +343,7 @@
     <div class="container">
         <div class="header">
             <h1>📞 Agenda Telefônica</h1>
-            <p>Gerenciamento de contatos em tempo real</p>
+            <p>Gerenciamento de contatos</p>
         </div>
 
         <div class="status-bar">
@@ -363,15 +351,11 @@
                 <div class="status-dot"></div>
                 <span id="status-texto">Conectado</span>
             </div>
-            <div id="ultima-atualizacao" style="font-size: 11px;">-</div>
+            <div id="armazenamento" style="font-size: 11px;">💾 Local</div>
         </div>
 
         <div class="content">
             <div id="mensagem-app" class="mensagem"></div>
-
-            <div class="sincronizando" id="sincronizando">
-                ⏳ Sincronizando...
-            </div>
 
             <!-- Formulário -->
             <div class="formulario">
@@ -428,22 +412,12 @@
     </div>
 
     <script>
-        const GITHUB_USER = 'Barbara-lemos';
-        const GITHUB_REPO = 'agenda-telefonica-R.A';
-        const GITHUB_TOKEN = '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';
-        const ARQUIVO_CONTATOS = 'contatos.json';
-        
-        // URLs
-        const URL_LEITURA = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${ARQUIVO_CONTATOS}`;
-        const URL_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ARQUIVO_CONTATOS}`;
-
+        const STORAGE_KEY = 'agenda_contatos';
         let contatos = [];
         let editandoId = null;
-        let syncInterval = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             carregarContatos();
-            syncInterval = setInterval(carregarContatos, 5000);
             
             document.getElementById('telefone').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') adicionarOuAtualizar();
@@ -453,71 +427,26 @@
             });
         });
 
-        async function carregarContatos() {
+        function carregarContatos() {
             try {
-                // Ler arquivo público (sem autenticação)
-                const response = await fetch(URL_LEITURA);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                const dados = localStorage.getItem(STORAGE_KEY);
+                if (dados) {
+                    contatos = JSON.parse(dados);
                 }
-
-                const text = await response.text();
-                contatos = text && text !== '[]' ? JSON.parse(text) : [];
                 renderizarContatos();
-                atualizarUltimaSincronizacao();
             } catch (erro) {
                 console.error('Erro ao carregar:', erro);
             }
         }
 
-        async function salvarContatos() {
-            mostrarSincronizando(true);
-
+        function salvarContatos() {
             try {
-                // Pegar SHA do arquivo (com autenticação)
-                const responseGet = await fetch(URL_API, {
-                    headers: {
-                        'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
-
-                let sha = null;
-                if (responseGet.ok) {
-                    const data = await responseGet.json();
-                    sha = data.sha;
-                }
-
-                const content = btoa(unescape(encodeURIComponent(JSON.stringify(contatos, null, 2))));
-
-                // Salvar arquivo (com autenticação)
-                const responsePut = await fetch(URL_API, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: `Atualização de contatos - ${new Date().toLocaleString('pt-BR')}`,
-                        content: content,
-                        sha: sha
-                    })
-                });
-
-                if (!responsePut.ok) {
-                    throw new Error(`HTTP ${responsePut.status}`);
-                }
-
-                mostrarSincronizando(false);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(contatos));
                 mostrarMensagem('✅ Contato salvo com sucesso!', 'sucesso');
-                setTimeout(() => carregarContatos(), 1000);
-
+                renderizarContatos();
             } catch (erro) {
                 console.error('Erro ao salvar:', erro);
                 mostrarMensagem('❌ Erro ao salvar contato', 'erro');
-                mostrarSincronizando(false);
             }
         }
 
@@ -633,16 +562,6 @@
             div.textContent = msg;
             div.className = 'mensagem ' + tipo;
             setTimeout(() => {div.className = 'mensagem';}, 4000);
-        }
-
-        function mostrarSincronizando(visivel) {
-            document.getElementById('sincronizando').classList.toggle('ativo', visivel);
-        }
-
-        function atualizarUltimaSincronizacao() {
-            const agora = new Date();
-            document.getElementById('ultima-atualizacao').innerText = 
-                `Última sincronização: ${agora.toLocaleTimeString('pt-BR')}`;
         }
     </script>
 </body>
