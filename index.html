@@ -311,6 +311,18 @@
             display: block;
         }
 
+        .sincronizando {
+            text-align: center;
+            color: #f9a825;
+            font-size: 12px;
+            padding: 10px;
+            display: none;
+        }
+
+        .sincronizando.ativo {
+            display: block;
+        }
+
         @media (max-width: 600px) {
             .header h1 {
                 font-size: 22px;
@@ -343,7 +355,7 @@
     <div class="container">
         <div class="header">
             <h1>📞 Agenda Telefônica</h1>
-            <p>Gerenciamento de contatos</p>
+            <p>Gerenciamento de contatos em tempo real</p>
         </div>
 
         <div class="status-bar">
@@ -351,11 +363,15 @@
                 <div class="status-dot"></div>
                 <span id="status-texto">Conectado</span>
             </div>
-            <div id="armazenamento" style="font-size: 11px;">💾 Local</div>
+            <div id="ultima-atualizacao" style="font-size: 11px;">-</div>
         </div>
 
         <div class="content">
             <div id="mensagem-app" class="mensagem"></div>
+
+            <div class="sincronizando" id="sincronizando">
+                ⏳ Sincronizando...
+            </div>
 
             <!-- Formulário -->
             <div class="formulario">
@@ -412,12 +428,22 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'agenda_contatos';
+        const GITHUB_USER = 'Barbara-lemos';
+        const GITHUB_REPO = 'agenda-telefonica-R.A';
+        const GITHUB_TOKEN = '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';
+        const ARQUIVO_CONTATOS = 'contatos.json';
+        
+        const URL_LEITURA = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${ARQUIVO_CONTATOS}`;
+        const URL_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${ARQUIVO_CONTATOS}`;
+
         let contatos = [];
         let editandoId = null;
+        let syncInterval = null;
+        let ultimaSincronizacao = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             carregarContatos();
+            syncInterval = setInterval(carregarContatos, 5000);
             
             document.getElementById('telefone').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') adicionarOuAtualizar();
@@ -427,26 +453,80 @@
             });
         });
 
-        function carregarContatos() {
+        async function carregarContatos() {
             try {
-                const dados = localStorage.getItem(STORAGE_KEY);
-                if (dados) {
-                    contatos = JSON.parse(dados);
+                const response = await fetch(URL_LEITURA + '?t=' + Date.now());
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
-                renderizarContatos();
+
+                const text = await response.text();
+                const novosDados = text && text.trim() ? JSON.parse(text) : [];
+                
+                // Só atualiza se houve mudança
+                if (JSON.stringify(novosDados) !== JSON.stringify(contatos)) {
+                    contatos = novosDados;
+                    renderizarContatos();
+                }
+                
+                atualizarUltimaSincronizacao();
             } catch (erro) {
                 console.error('Erro ao carregar:', erro);
             }
         }
 
-        function salvarContatos() {
+        async function salvarContatos() {
+            mostrarSincronizando(true);
+
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(contatos));
-                mostrarMensagem('✅ Contato salvo com sucesso!', 'sucesso');
-                renderizarContatos();
+                // Pegar SHA do arquivo
+                const responseGet = await fetch(URL_API, {
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (!responseGet.ok) {
+                    throw new Error(`Erro ao obter SHA: ${responseGet.status}`);
+                }
+
+                const data = await responseGet.json();
+                const sha = data.sha;
+
+                // Codificar conteúdo
+                const content = btoa(JSON.stringify(contatos, null, 2));
+
+                // Salvar arquivo
+                const responsePut = await fetch(URL_API, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Atualização - ${new Date().toLocaleString('pt-BR')}`,
+                        content: content,
+                        sha: sha
+                    })
+                });
+
+                if (!responsePut.ok) {
+                    throw new Error(`Erro ao salvar: ${responsePut.status}`);
+                }
+
+                mostrarSincronizando(false);
+                mostrarMensagem('✅ Sincronizado com sucesso!', 'sucesso');
+                
+                // Recarregar após 1 segundo
+                setTimeout(() => carregarContatos(), 1000);
+
             } catch (erro) {
                 console.error('Erro ao salvar:', erro);
-                mostrarMensagem('❌ Erro ao salvar contato', 'erro');
+                mostrarMensagem('❌ Erro ao sincronizar', 'erro');
+                mostrarSincronizando(false);
             }
         }
 
@@ -562,6 +642,16 @@
             div.textContent = msg;
             div.className = 'mensagem ' + tipo;
             setTimeout(() => {div.className = 'mensagem';}, 4000);
+        }
+
+        function mostrarSincronizando(visivel) {
+            document.getElementById('sincronizando').classList.toggle('ativo', visivel);
+        }
+
+        function atualizarUltimaSincronizacao() {
+            const agora = new Date();
+            document.getElementById('ultima-atualizacao').innerText = 
+                `Sincronizado: ${agora.toLocaleTimeString('pt-BR')}`;
         }
     </script>
 </body>
