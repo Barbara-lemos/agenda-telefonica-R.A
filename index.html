@@ -149,10 +149,6 @@
             box-shadow: 0 4px 12px rgba(0, 75, 158, 0.3);
         }
 
-        .btn-adicionar:active {
-            transform: translateY(0);
-        }
-
         .btn-cancelar {
             background: #e9ecef;
             color: #333;
@@ -174,10 +170,6 @@
             border: 2px solid #e0e7ff;
             border-radius: 6px;
             font-size: 14px;
-        }
-
-        .busca-box input::placeholder {
-            color: #999;
         }
 
         .busca-box input:focus {
@@ -209,11 +201,6 @@
             text-align: center;
             padding: 50px 20px;
             color: #999;
-        }
-
-        .vazio-icone {
-            font-size: 40px;
-            margin-bottom: 10px;
         }
 
         .lista-contatos {
@@ -336,32 +323,9 @@
             display: block;
         }
 
-        .spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid #f9a825;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 6px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         @media (max-width: 600px) {
             .header h1 {
                 font-size: 22px;
-            }
-
-            .header p {
-                font-size: 12px;
-            }
-
-            .content {
-                padding: 20px 15px;
             }
 
             .contato-item {
@@ -383,10 +347,6 @@
 
             .botoes {
                 grid-template-columns: 1fr;
-            }
-
-            .lista-contatos {
-                max-height: 400px;
             }
         }
     </style>
@@ -410,7 +370,7 @@
             <div id="mensagem-app" class="mensagem"></div>
 
             <div class="sincronizando" id="sincronizando">
-                <span class="spinner"></span>Sincronizando...
+                ⏳ Sincronizando...
             </div>
 
             <!-- Formulário -->
@@ -468,7 +428,6 @@
     </div>
 
     <script>
-        // CONFIGURAÇÃO - MUDE AQUI!
         const GITHUB_USER = 'Barbara-lemos';
         const GITHUB_REPO = 'agenda-telefonica-R.A';
         const GITHUB_TOKEN = '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';
@@ -477,16 +436,12 @@
 
         let contatos = [];
         let editandoId = null;
-        let ultimaSincronizacao = null;
         let syncInterval = null;
 
-        // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             carregarContatos();
-            // Sincronizar a cada 5 segundos
             syncInterval = setInterval(carregarContatos, 5000);
             
-            // Suporte a Enter
             document.getElementById('telefone').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') adicionarOuAtualizar();
             });
@@ -499,28 +454,22 @@
             try {
                 const response = await fetch(API_URL, {
                     headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3.raw'
+                        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3.raw',
+                        'X-GitHub-Api-Version': '2022-11-28'
                     }
                 });
 
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        // Arquivo não existe, criar
-                        await criarArquivo([]);
-                        contatos = [];
-                    } else {
-                        throw new Error(`Erro ${response.status}`);
-                    }
-                } else {
-                    contatos = await response.json();
+                    throw new Error(`HTTP ${response.status}`);
                 }
 
+                const text = await response.text();
+                contatos = text ? JSON.parse(text) : [];
                 renderizarContatos();
                 atualizarUltimaSincronizacao();
             } catch (erro) {
                 console.error('Erro ao carregar:', erro);
-                mostrarMensagem('❌ Erro ao sincronizar', 'erro');
             }
         }
 
@@ -528,11 +477,11 @@
             mostrarSincronizando(true);
 
             try {
-                // Primeiro, pegar o SHA do arquivo atual
                 const responseGet = await fetch(API_URL, {
                     headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json'
+                        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'X-GitHub-Api-Version': '2022-11-28'
                     }
                 });
 
@@ -542,15 +491,14 @@
                     sha = data.sha;
                 }
 
-                // Preparar dados
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(contatos, null, 2))));
 
-                // Atualizar arquivo
                 const responsePut = await fetch(API_URL, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Authorization': `Bearer ${GITHUB_TOKEN}`,
                         'Accept': 'application/vnd.github.v3+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -561,7 +509,7 @@
                 });
 
                 if (!responsePut.ok) {
-                    throw new Error(`Erro ao salvar: ${responsePut.status}`);
+                    throw new Error(`HTTP ${responsePut.status}`);
                 }
 
                 mostrarSincronizando(false);
@@ -572,27 +520,6 @@
                 console.error('Erro ao salvar:', erro);
                 mostrarMensagem('❌ Erro ao salvar contato', 'erro');
                 mostrarSincronizando(false);
-            }
-        }
-
-        async function criarArquivo(dados) {
-            try {
-                const content = btoa(unescape(encodeURIComponent(JSON.stringify(dados, null, 2))));
-
-                await fetch(API_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: 'Criação de arquivo de contatos',
-                        content: content
-                    })
-                });
-            } catch (erro) {
-                console.error('Erro ao criar arquivo:', erro);
             }
         }
 
@@ -677,7 +604,6 @@
             if (contatosFiltrados.length === 0) {
                 lista.innerHTML = `
                     <div class="vazio">
-                        <div class="vazio-icone">${contatos.length === 0 ? '📭' : '🔍'}</div>
                         <p>${contatos.length === 0 ? 'Nenhum contato ainda' : 'Nenhum resultado encontrado'}</p>
                     </div>
                 `;
@@ -700,13 +626,7 @@
         }
 
         function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
+            const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
             return String(text).replace(/[&<>"']/g, m => map[m]);
         }
 
@@ -714,9 +634,7 @@
             const div = document.getElementById('mensagem-app');
             div.textContent = msg;
             div.className = 'mensagem ' + tipo;
-            setTimeout(() => {
-                div.className = 'mensagem';
-            }, 4000);
+            setTimeout(() => {div.className = 'mensagem';}, 4000);
         }
 
         function mostrarSincronizando(visivel) {
